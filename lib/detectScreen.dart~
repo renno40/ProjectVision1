@@ -1,0 +1,319 @@
+import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
+import 'package:tflite_v2/tflite_v2.dart';
+import 'dart:math' as math;
+
+class ObjectDetectionScreen extends StatefulWidget {
+  const ObjectDetectionScreen({Key? key}) : super(key: key);
+
+  @override
+  _ObjectDetectionScreenState createState() => _ObjectDetectionScreenState();
+}
+
+class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
+  late List<CameraDescription> cameras;
+  CameraController? cameraController;
+  bool isDetecting = false;
+  List<dynamic> recognitions = [];
+
+  // Screen dimensions
+  Size? screenSize;
+  double? screenRatio;
+  double? previewRatio;
+  Size? previewSize;
+
+  @override
+  void initState() {
+    super.initState();
+    initializeCamera();
+    loadModel();
+  }
+
+  Future<void> initializeCamera() async {
+    cameras = await availableCameras();
+
+    // Use the first camera (usually the back camera)
+    cameraController = CameraController(
+      cameras[0],
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+
+    try {
+      await cameraController!.initialize();
+
+      // Set up camera image stream
+      cameraController!.startImageStream((CameraImage image) {
+        if (!isDetecting) {
+          isDetecting = true;
+          detectObjects(image);
+        }
+      });
+
+      if (mounted) {
+        setState(() {
+          previewSize = Size(
+            cameraController!.value.previewSize!.height,
+            cameraController!.value.previewSize!.width,
+          );
+        });
+      }
+    } catch (e) {
+      print('Error initializing camera: $e');
+    }
+  }
+
+  Future<void> loadModel() async {
+    try {
+      await Tflite.loadModel(
+        model: "assets/yolov8nfloat32.tflite",
+        labels: "assets/labels.txt",
+        numThreads: 1,
+        isAsset: true,
+        useGpuDelegate: false,
+      );
+      print("Model loaded successfully");
+    } catch (e) {
+      print('Error loading model: $e');
+    }
+  }
+
+  Future<void> detectObjects(CameraImage image) async {
+    try {
+      var results = await Tflite.detectObjectOnFrame(
+        bytesList: image.planes.map((plane) => plane.bytes).toList(),
+        model: "YOLO",
+        imageHeight: image.height,
+        imageWidth: image.width,
+        imageMean: 0,
+        imageStd: 255.0,
+        threshold: 0.3,
+        numResultsPerClass: 2,
+        // For YOLOv8, you might need to adjust anchors
+        asynch: true,
+      );
+
+      // Update state with new recognitions
+      if (mounted) {
+        setState(() {
+          recognitions = results ?? [];
+        });
+      }
+    } catch (e) {
+      print('Error detecting objects: $e');
+    }
+
+    isDetecting = false;
+  }
+
+  @override
+  void dispose() {
+    cameraController?.stopImageStream();
+    cameraController?.dispose();
+    Tflite.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (cameraController == null || !cameraController!.value.isInitialized) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    // Calculate screen and preview ratios for proper display
+    screenSize = MediaQuery.of(context).size;
+    screenRatio = screenSize!.width / screenSize!.height;
+    previewRatio = previewSize != null ? previewSize!.width / previewSize!.height : screenRatio;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('YOLOv8 Object Detection'),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: Stack(
+              children: [
+                // Camera preview
+                _buildCameraPreview(),
+
+                // Bounding boxes overlay
+                _buildBoxesOverlay(),
+              ],
+            ),
+          ),
+          // Detection info panel
+          _buildDetectionInfoPanel(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCameraPreview() {
+    // Handle different screen and camera preview ratios
+    return AspectRatio(
+      aspectRatio: cameraController!.value.aspectRatio,
+      child: CameraPreview(cameraController!),
+    );
+  }
+
+  Widget _buildBoxesOverlay() {
+    if (recognitions.isEmpty) return Container();
+
+    return Container(
+      width: screenSize!.width,
+      height: screenSize!.width * cameraController!.value.aspectRatio,
+      child: CustomPaint(
+        painter: BoundingBoxPainter(
+          recognitions: recognitions,
+          previewSize: previewSize!,
+          screenSize: screenSize!,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetectionInfoPanel() {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      color: Colors.black54,
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Detected Objects:',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          ...recognitions.map((recognition) {
+            return Text(
+              '${recognition['detectedClass']} - ${(recognition['confidenceInClass'] * 100).toStringAsFixed(0)}%',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+              ),
+            );
+          }).toList(),
+          if (recognitions.isEmpty)
+            const Text(
+              'No objects detected',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// Custom painter for drawing bounding boxes
+class BoundingBoxPainter extends CustomPainter {
+  final List<dynamic> recognitions;
+  final Size previewSize;
+  final Size screenSize;
+
+  // Define colors for bounding boxes
+  final List<Color> colors = [
+    Colors.red,
+    Colors.green,
+    Colors.blue,
+    Colors.yellow,
+    Colors.purple,
+    Colors.orange,
+    Colors.teal,
+  ];
+
+  BoundingBoxPainter({
+    required this.recognitions,
+    required this.previewSize,
+    required this.screenSize,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double scaleX = size.width / previewSize.width;
+    final double scaleY = size.height / previewSize.height;
+
+    final Paint boxPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final Paint textBgPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = Colors.black54;
+
+    final TextStyle textStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+    );
+
+    for (var i = 0; i < recognitions.length; i++) {
+      final recognition = recognitions[i];
+
+      // Get detection box coordinates
+      final rect = Rect.fromLTWH(
+        recognition['rect']['x'] * scaleX,
+        recognition['rect']['y'] * scaleY,
+        recognition['rect']['w'] * scaleX,
+        recognition['rect']['h'] * scaleY,
+      );
+
+      // Choose color for this object
+      final colorIndex = i % colors.length;
+      boxPaint.color = colors[colorIndex];
+
+      // Draw bounding box
+      canvas.drawRect(rect, boxPaint);
+
+      // Draw label and confidence
+      final String label =
+          '${recognition['detectedClass']} ${(recognition['confidenceInClass'] * 100).toStringAsFixed(0)}%';
+
+      final textSpan = TextSpan(
+        text: label,
+        style: textStyle,
+      );
+
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      );
+
+      textPainter.layout();
+
+      // Draw text background
+      final textBgRect = Rect.fromLTWH(
+        rect.left,
+        rect.top - textPainter.height,
+        textPainter.width + 8,
+        textPainter.height + 4,
+      );
+
+      canvas.drawRect(textBgRect, textBgPaint);
+
+      // Draw text
+      textPainter.paint(
+        canvas,
+        Offset(rect.left + 4, rect.top - textPainter.height + 2),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(BoundingBoxPainter oldDelegate) {
+    return recognitions != oldDelegate.recognitions;
+  }
+}
