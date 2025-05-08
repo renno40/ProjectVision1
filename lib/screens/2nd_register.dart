@@ -155,7 +155,7 @@ class _RegisterState extends State<Register> {
                     if (formKey.currentState!.validate()) {
                       try {
                         // Call the Supabase registration method
-                        await supbaseAuth().registerUseer(
+                        await SupabaseAuth().SingUp(
                             emailController.text,
                             passwordController.text
                             , usernameController.text

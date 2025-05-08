@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:testnow/screens/10_setting.dart';
 import 'package:testnow/screens/6th_text.dart';
+import 'package:testnow/screens/profilescreen.dart';
 
 import '7th_detectScreen.dart';
-import '8th_glass.dart';
 
 class Homescreen extends StatelessWidget {
   @override
@@ -26,7 +27,7 @@ class Homescreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(width: 90.w),
+            SizedBox(width: 70.w),
             Image.asset(
               "assets/Vision Mate.png", // Replace with actual logo path
               width: 70.w,
@@ -68,9 +69,9 @@ class Homescreen extends StatelessWidget {
               ),
               buildFeatureTile(
                 context,
-                "Find My Glasses",
-                "assets/glasses.png",
-                GlassesScreen(),
+                "My Profile",
+                "assets/man-avatar-icon-free-vector.jpg", // You'll need to add this image to your assets
+                ProfileScreen(), // New profile screen instead of GlassesScreen
               ),
             ],
           ),
@@ -82,9 +83,17 @@ class Homescreen extends StatelessWidget {
         backgroundColor: Colors.white,
         selectedItemColor: Color(0xFF1D9AC6),
         unselectedItemColor: Colors.grey,
+        currentIndex: 0, // Default to home selected
+        onTap: (index) {
+          if (index == 1) { // Settings button
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SettingsScreen()),
+            );
+          }
+        },
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),

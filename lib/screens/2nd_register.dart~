@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 
+import '../backEnd/supbase/supbaseAuth.dart';
 import '3rd_login.dart';
 import '4rth_onboard.dart';
-import 'home_screen.dart'; // Make sure this import exists
-import 'auth/supabase_auth.dart'; // Make sure this import exists
-
 class Register extends StatefulWidget {
   @override
   _RegisterState createState() => _RegisterState();
@@ -151,50 +149,46 @@ class _RegisterState extends State<Register> {
 
                 SizedBox(height: 30.h),
 
+                // Register button with Supabase Auth
+                ElevatedButton(
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      try {
+                        // Call the Supabase registration method
+                        await supbaseAuth().registerUseer(
+                            emailController.text,
+                            passwordController.text
+                            , usernameController.text
+                            , datebirthController.text
+                            , visionProblemController.text);
 
-
-                // Register button with Builder pattern and Supabase Auth
-                Builder(
-                  builder: (context, state) {
-                    return ElevatedButton(
-                      onPressed: () async {
-                        if (formKey.currentState!.validate()) {
-                          try {
-                            // Call the Supabase registration method
-                            await supbaseAuth().registerUseer(
-                              emailController.text,
-                              passwordController.text,
-                            );
-
-                            // Navigate to home screen after successful registration
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => homeScreen()),
-                            );
-                          } catch (e) {
-                            // Handle registration errors
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Registration failed: ${e.toString()}")),
-                            );
-                          }
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF1D9AC6),
-                        padding: EdgeInsets.symmetric(horizontal: 100, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: Text(
-                        "Sign up",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20.sp,
-                        ),
-                      ),
-                    );
+                        // Navigate to home screen after successful registration
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => OnboardScreen()),
+                        );
+                      } catch (e) {
+                        // Handle registration errors
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Registration failed: ${e.toString()}")),
+                        );
+                      }
+                    }
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF1D9AC6),
+                    padding: EdgeInsets.symmetric(horizontal: 100, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: Text(
+                    "Sign up",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20.sp,
+                    ),
+                  ),
                 ),
 
                 SizedBox(height: 15.h),

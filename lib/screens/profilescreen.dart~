@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
@@ -14,11 +15,12 @@ class TextRecognitionScreen extends StatefulWidget {
 
 class _TextRecognitionScreenState extends State<TextRecognitionScreen> {
   CameraController? _cameraController;
+  bool _isDetecting = false;
   late TextRecognizer _textRecognizer;
   final FlutterTts _flutterTts = FlutterTts();
 
   String _recognizedText = "";
-  String _currentLanguage = "English-US";
+  String _currentLanguage = "en-US"; // فعلي وصحيح
 
   @override
   void initState() {
@@ -35,7 +37,7 @@ class _TextRecognitionScreenState extends State<TextRecognitionScreen> {
 
   void _toggleLanguage() async {
     setState(() {
-      _currentLanguage = _currentLanguage == "English-US" ? "ar-SA" : "English-US";
+      _currentLanguage = _currentLanguage == "en-US" ? "ar-SA" : "en-US";
     });
     await _setTtsLanguage();
   }
@@ -54,26 +56,58 @@ class _TextRecognitionScreenState extends State<TextRecognitionScreen> {
     await _cameraController!.initialize();
     if (!mounted) return;
     setState(() {});
+    _cameraController!.startImageStream(_processCameraImage);
   }
 
-  Future<void> _captureAndRecognizeImage() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) return;
+  Future<void> _processCameraImage(CameraImage image) async {
+    if (_isDetecting) return;
+    _isDetecting = true;
 
     try {
-      final image = await _cameraController!.takePicture();
-      final inputImage = InputImage.fromFilePath(image.path);
-      final recognizedText = await _textRecognizer.processImage(inputImage);
+      final WriteBuffer allBytes = WriteBuffer();
+      for (Plane plane in image.planes) {
+        allBytes.putUint8List(plane.bytes);
+      }
+
+      final bytes = allBytes.done().buffer.asUint8List();
+      final Size imageSize = Size(image.width.toDouble(), image.height.toDouble());
+
+      final inputImage = InputImage.fromBytes(
+        bytes: bytes,
+        metadata: InputImageMetadata(
+          size: imageSize,
+          rotation: InputImageRotation.rotation0deg,
+          format: InputImageFormat.nv21,
+          bytesPerRow: image.planes[0].bytesPerRow,
+        ),
+      );
+
+      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
       final newText = recognizedText.text.trim();
 
       if (newText.isNotEmpty && newText != _recognizedText) {
         setState(() {
           _recognizedText = newText;
         });
+
         await _flutterTts.setLanguage(_currentLanguage);
-        await _flutterTts.speak(newText);
+        await _flutterTts.stop(); // إيقاف أي قراءة سابقة
+
+        // قراءة النص: سطر سطر، وكلمة كلمة
+        for (TextBlock block in recognizedText.blocks) {
+          for (TextLine line in block.lines) {
+            for (TextElement word in line.elements) {
+              await _flutterTts.speak(word.text);
+              await Future.delayed(const Duration(milliseconds: 600));
+            }
+            await Future.delayed(const Duration(milliseconds: 800)); // تأخير بين الأسطر
+          }
+        }
       }
     } catch (e) {
-      print("Capture error: $e");
+      print("Error: $e");
+    } finally {
+      _isDetecting = false;
     }
   }
 
@@ -98,7 +132,7 @@ class _TextRecognitionScreenState extends State<TextRecognitionScreen> {
           IconButton(
             icon: const Icon(Icons.language),
             onPressed: _toggleLanguage,
-            tooltip: "Language",
+            tooltip: "Toggle Language",
           ),
         ],
       ),
@@ -112,15 +146,9 @@ class _TextRecognitionScreenState extends State<TextRecognitionScreen> {
             child: Text(
               _recognizedText,
               style: const TextStyle(color: Colors.white, fontSize: 20),
-              textAlign: TextAlign.center,
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _captureAndRecognizeImage,
-        child: const Icon(Icons.camera_alt),
-        tooltip: 'Capture and Read Text',
       ),
     );
   }

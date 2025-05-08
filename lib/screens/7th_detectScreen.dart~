@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:tflite_v2/tflite_v2.dart';
-import 'dart:math' as math;
 
 class ObjectDetectionScreen extends StatefulWidget {
   const ObjectDetectionScreen({Key? key}) : super(key: key);
@@ -10,54 +9,68 @@ class ObjectDetectionScreen extends StatefulWidget {
   _ObjectDetectionScreenState createState() => _ObjectDetectionScreenState();
 }
 
-class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
-  late List<CameraDescription> cameras;
+class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> with WidgetsBindingObserver {
+  List<CameraDescription>? cameras;
   CameraController? cameraController;
   bool isDetecting = false;
   List<dynamic> recognitions = [];
-
-  // Screen dimensions
-  Size? screenSize;
-  double? screenRatio;
-  double? previewRatio;
-  Size? previewSize;
+  bool isModelLoaded = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     initializeCamera();
     loadModel();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // App state changed before we got the chance to initialize the camera
+    if (cameraController == null || !cameraController!.value.isInitialized) {
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive) {
+      cameraController?.dispose();
+    } else if (state == AppLifecycleState.resumed) {
+      initializeCamera();
+    }
+  }
+
   Future<void> initializeCamera() async {
-    cameras = await availableCameras();
-
-    // Use the first camera (usually the back camera)
-    cameraController = CameraController(
-      cameras[0],
-      ResolutionPreset.medium,
-      enableAudio: false,
-    );
-
     try {
+      // Get available cameras
+      cameras = await availableCameras();
+
+      if (cameras == null || cameras!.isEmpty) {
+        print('No cameras available');
+        return;
+      }
+
+      // Use the first camera (usually the back camera)
+      cameraController = CameraController(
+        cameras![0],
+        ResolutionPreset.medium,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.yuv420,
+      );
+
+      // Initialize the camera
       await cameraController!.initialize();
 
-      // Set up camera image stream
+      if (!mounted) return;
+
+      setState(() {});
+
+      // Start camera stream after setState to ensure UI is updated
       cameraController!.startImageStream((CameraImage image) {
-        if (!isDetecting) {
+        if (!isDetecting && isModelLoaded) {
           isDetecting = true;
-          detectObjects(image);
+          analyzeImage(image);
         }
       });
 
-      if (mounted) {
-        setState(() {
-          previewSize = Size(
-            cameraController!.value.previewSize!.height,
-            cameraController!.value.previewSize!.width,
-          );
-        });
-      }
     } catch (e) {
       print('Error initializing camera: $e');
     }
@@ -66,48 +79,61 @@ class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
   Future<void> loadModel() async {
     try {
       await Tflite.loadModel(
-        model: "assets/yolov8n_float32.tflite",
+        model: "assets/yolov8n_float32 (1).tflite",
         labels: "assets/labels.txt",
         numThreads: 1,
         isAsset: true,
         useGpuDelegate: false,
       );
-      print("Model loaded successfully");
+
+      setState(() {
+        isModelLoaded = true;
+        print("Model loaded successfully");
+      });
     } catch (e) {
       print('Error loading model: $e');
     }
   }
 
-  Future<void> detectObjects(CameraImage image) async {
+  Future<void> analyzeImage(CameraImage image) async {
     try {
-      var results = await Tflite.detectObjectOnFrame(
-        bytesList: image.planes.map((plane) => plane.bytes).toList(),
-        model: "YOLO",
+      // Use just the Y plane from YUV image
+      var results = await Tflite.runModelOnFrame(
+        bytesList: [image.planes[0].bytes],
         imageHeight: image.height,
         imageWidth: image.width,
-        imageMean: 0,
-        imageStd: 255.0,
-        threshold: 0.3,
-        numResultsPerClass: 2,
-        // For YOLOv8, you might need to adjust anchors
+        imageMean: 127.5,
+        imageStd: 127.5,
+        rotation: 90,
+        numResults: 5,
+        threshold: 0.4,
         asynch: true,
       );
 
-      // Update state with new recognitions
-      if (mounted) {
+      if (mounted && results != null) {
         setState(() {
-          recognitions = results ?? [];
+          // Format results to match our UI expectations
+          recognitions = results.map((res) => {
+            'rect': {'x': 0.1, 'y': 0.1, 'w': 0.8, 'h': 0.8}, // Default rect for classifications
+            'detectedClass': res['label'] ?? 'unknown',
+            'confidenceInClass': res['confidence'] ?? 0.0,
+          }).toList();
+
+          if (recognitions.isNotEmpty) {
+            print("Detected: ${recognitions[0]['detectedClass']} - ${(recognitions[0]['confidenceInClass'] * 100).toStringAsFixed(0)}%");
+          }
         });
       }
     } catch (e) {
-      print('Error detecting objects: $e');
+      print('Error analyzing image: $e');
+    } finally {
+      isDetecting = false;
     }
-
-    isDetecting = false;
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     cameraController?.stopImageStream();
     cameraController?.dispose();
     Tflite.close();
@@ -124,54 +150,62 @@ class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
       );
     }
 
-    // Calculate screen and preview ratios for proper display
-    screenSize = MediaQuery.of(context).size;
-    screenRatio = screenSize!.width / screenSize!.height;
-    previewRatio = previewSize != null ? previewSize!.width / previewSize!.height : screenRatio;
+    final size = MediaQuery.of(context).size;
+
+    // Calculate scale to fill the screen
+    var scale = size.aspectRatio * cameraController!.value.aspectRatio;
+    if (scale < 1) scale = 1 / scale;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('YOLOv8 Object Detection'),
-      ),
-      body: Column(
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          Expanded(
-            child: Stack(
-              children: [
-                // Camera preview
-                _buildCameraPreview(),
-
-                // Bounding boxes overlay
-                _buildBoxesOverlay(),
-              ],
+          // Full screen camera preview
+          Transform.scale(
+            scale: scale,
+            alignment: Alignment.center,
+            child: Center(
+              child: CameraPreview(cameraController!),
             ),
           ),
+
+          // Bounding boxes overlay
+          _buildBoxesOverlay(size),
+
+          // App bar overlay
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AppBar(
+              backgroundColor: Colors.black54,
+              elevation: 0,
+              title: const Text('Object Detection'),
+            ),
+          ),
+
           // Detection info panel
-          _buildDetectionInfoPanel(),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: _buildDetectionInfoPanel(),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCameraPreview() {
-    // Handle different screen and camera preview ratios
-    return AspectRatio(
-      aspectRatio: cameraController!.value.aspectRatio,
-      child: CameraPreview(cameraController!),
-    );
-  }
-
-  Widget _buildBoxesOverlay() {
+  Widget _buildBoxesOverlay(Size screenSize) {
     if (recognitions.isEmpty) return Container();
 
-    return Container(
-      width: screenSize!.width,
-      height: screenSize!.width * cameraController!.value.aspectRatio,
+    return SizedBox(
+      width: screenSize.width,
+      height: screenSize.height,
       child: CustomPaint(
         painter: BoundingBoxPainter(
           recognitions: recognitions,
-          previewSize: previewSize!,
-          screenSize: screenSize!,
+          screenSize: screenSize,
         ),
       ),
     );
@@ -218,13 +252,10 @@ class _ObjectDetectionScreenState extends State<ObjectDetectionScreen> {
   }
 }
 
-// Custom painter for drawing bounding boxes
 class BoundingBoxPainter extends CustomPainter {
   final List<dynamic> recognitions;
-  final Size previewSize;
   final Size screenSize;
 
-  // Define colors for bounding boxes
   final List<Color> colors = [
     Colors.red,
     Colors.green,
@@ -237,48 +268,42 @@ class BoundingBoxPainter extends CustomPainter {
 
   BoundingBoxPainter({
     required this.recognitions,
-    required this.previewSize,
     required this.screenSize,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double scaleX = size.width / previewSize.width;
-    final double scaleY = size.height / previewSize.height;
-
     final Paint boxPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 3.0;
 
     final Paint textBgPaint = Paint()
       ..style = PaintingStyle.fill
-      ..color = Colors.black54;
+      ..color = Colors.black.withOpacity(0.7);
 
-    final TextStyle textStyle = TextStyle(
+    const TextStyle textStyle = TextStyle(
       color: Colors.white,
-      fontSize: 14,
+      fontSize: 16,
       fontWeight: FontWeight.bold,
     );
 
     for (var i = 0; i < recognitions.length; i++) {
       final recognition = recognitions[i];
 
-      // Get detection box coordinates
+      // For MobileNet which does classification (not object detection),
+      // we'll just show a centered box
       final rect = Rect.fromLTWH(
-        recognition['rect']['x'] * scaleX,
-        recognition['rect']['y'] * scaleY,
-        recognition['rect']['w'] * scaleX,
-        recognition['rect']['h'] * scaleY,
+        recognition['rect']['x'] * screenSize.width,
+        recognition['rect']['y'] * screenSize.height,
+        recognition['rect']['w'] * screenSize.width,
+        recognition['rect']['h'] * screenSize.height,
       );
 
-      // Choose color for this object
       final colorIndex = i % colors.length;
       boxPaint.color = colors[colorIndex];
 
-      // Draw bounding box
       canvas.drawRect(rect, boxPaint);
 
-      // Draw label and confidence
       final String label =
           '${recognition['detectedClass']} ${(recognition['confidenceInClass'] * 100).toStringAsFixed(0)}%';
 
@@ -294,20 +319,18 @@ class BoundingBoxPainter extends CustomPainter {
 
       textPainter.layout();
 
-      // Draw text background
       final textBgRect = Rect.fromLTWH(
         rect.left,
-        rect.top - textPainter.height,
+        rect.top - textPainter.height - 4,
         textPainter.width + 8,
         textPainter.height + 4,
       );
 
       canvas.drawRect(textBgRect, textBgPaint);
 
-      // Draw text
       textPainter.paint(
         canvas,
-        Offset(rect.left + 4, rect.top - textPainter.height + 2),
+        Offset(rect.left + 4, rect.top - textPainter.height),
       );
     }
   }

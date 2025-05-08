@@ -10,7 +10,7 @@ class SupbaseDb {
 
   Future insertProfile (Profile profile) async {
     try{
-      await supabase.from('registration').insert(profile.toMap());
+      await supabase.from('profilesusers').insert(profile.toMap());
       print ("Insert Successfully");
     }catch(e){
       throw Exception(e.toString());
@@ -21,7 +21,7 @@ class SupbaseDb {
   Future<Profile>getUserProfile(String id)async{
     try{
       final userProfile =
-      await supabase.from('registration').select().eq('id', id).single();
+      await supabase.from('profilesusers').select().eq('id', id).single();
       return Profile.fromMap(userProfile);
     }catch(e){
       throw Exception(e.toString());
@@ -29,7 +29,7 @@ class SupbaseDb {
   }
   Future<List<Profile>> getallProfile()async{
     try {
-      final profiles =  await supabase.from('registration').select();
+      final profiles =  await supabase.from('profilesusers').select();
       return profiles.map((e)=>Profile.fromMap(e)).toList();
       print("Get All Profile Successfully");
     }catch(e){
