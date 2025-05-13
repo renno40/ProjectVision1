@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:testnow/screens/10_setting.dart';
@@ -7,6 +8,10 @@ import 'package:testnow/screens/profilescreen.dart';
 import '7th_detectScreen.dart';
 
 class Homescreen extends StatelessWidget {
+  final List<CameraDescription> cameras;
+
+  const Homescreen({super.key, required this.cameras});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,7 +70,7 @@ class Homescreen extends StatelessWidget {
                 context,
                 "Walk Assist",
                 "assets/walk.png",
-                ObjectDetectionScreen(),
+                RealTimeObjectDetection(cameras: cameras,),
               ),
               buildFeatureTile(
                 context,

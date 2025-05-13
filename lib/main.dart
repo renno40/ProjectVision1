@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +29,7 @@ void main() async {
     anonKey:
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pZXJobnp2c291YWtxYnZzZmh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNzAyODksImV4cCI6MjA2MTg0NjI4OX0.846QDHPbxOGiwoc2eArY_s6vXwZA03JhJiOpcc8Ws_U",
   );
+  final cameras = await availableCameras();
 
   runApp(
     MultiProvider(
@@ -35,13 +37,16 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider()), // Theme provider
         BlocProvider(create: (context) => ProfileCubit()), // ProfileCubit
       ],
-      child:  MyApp(), // Your app
+      child:  MyApp(cameras: cameras,), // Your app
     ),
   );
 }
 
 
 class MyApp extends StatelessWidget {
+  final List<CameraDescription> cameras;
+
+  const MyApp({super.key, required this.cameras});
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
@@ -57,12 +62,12 @@ class MyApp extends StatelessWidget {
               "/OnboardScreen": (context) => OnboardScreen(),
               "/register": (context) => Register(),
               "/login": (context) => LoginScreen(),
-              "/Home": (context) => Homescreen(),
+              "/Home": (context) => Homescreen(cameras: cameras,),
               "/ReadTextScreen": (context) => ReadTextPage(),
               "/FindGlassesScreen": (context) => GlassesScreen(),
               "/history": (context) => HistoryScreen(),
               "/text": (context) => TextRecognitionScreen(),
-              "/detect": (context) => ObjectDetectionScreen(),
+              "/detect": (context) => RealTimeObjectDetection(cameras:cameras,),
               "/profile": (context) => ProfileScreen(),
               "/settings":(context) => SettingsScreen(),
             },
