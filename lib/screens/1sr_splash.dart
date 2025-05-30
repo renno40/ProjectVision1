@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../backEnd/supbase/supbaseAuth.dart';
 
 class splashScreen extends StatefulWidget {
   const splashScreen({super.key});
@@ -10,13 +12,19 @@ class splashScreen extends StatefulWidget {
 
 class _State extends State<splashScreen> {
   @override
-  void initState(){
+  void initState() {
     // TOOO: impement initState
     super.initState();
-    Future.delayed(Duration(seconds:3),(){
-      Navigator.pushNamed(context, "/register");
+    Future.delayed(Duration(seconds: 3), () {
+      final supabase = Supabase.instance.client;
+      if (supabase.auth.currentUser != null) {
+        Navigator.pushReplacementNamed(context, "/Home");
+      } else {
+        Navigator.pushReplacementNamed(context, "/login");
+      }
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,7 +44,8 @@ class _State extends State<splashScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Image.asset("assets/Vision Mate.png", height: 400),
-              Text("VISION_MATE",
+              Text(
+                "VISION_MATE",
                 style: TextStyle(color: Colors.white, fontSize: 40),
                 textAlign: TextAlign.center,
               ),
@@ -45,4 +54,5 @@ class _State extends State<splashScreen> {
         ),
       ),
     );
-  }}
+  }
+}

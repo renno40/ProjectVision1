@@ -30,21 +30,17 @@ class ReadTextPage extends StatelessWidget {
           _buildHeader(),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildCustomIconOption(context, 'assets/cam-image.png', 'Open Camera',   () {
-    Navigator.pushNamed(context, "/text");
-  }),
-                  SizedBox(height: 10),
-                  _buildCustomIconOption(context, 'assets/gallery-image.png', 'Import from Gallery',   () {
-    Navigator.pushNamed(context, "/text");
+                  _buildCustomIconOption(context, 'assets/cam-image.png', 'Open Camera', () {
+                    Navigator.pushNamed(context, "/TextRecognitionScreen");
                   }),
                   SizedBox(height: 10),
-                  _buildCustomIconOption(context, 'assets/history-image.png', 'History',   () {
-    Navigator.pushNamed(context, "/history");
-  }),
+                  _buildCustomIconOption(context, 'assets/gallery-image.png', 'Import from Gallery', () {
+                    Navigator.pushNamed(context, "/ImportGallery");
+                  }),
                 ],
               ),
             ),
@@ -55,10 +51,17 @@ class ReadTextPage extends StatelessWidget {
         backgroundColor: Colors.white,
         selectedItemColor: Color(0xFF1D9AC6),
         unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushNamed(context, "/Home");
+          } else if (index == 1) {
+            Navigator.pushNamed(context, "/profile");
+          }
+        }, // <- Make sure this comma is after closing the function
+
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
         ],
       ),
     );
@@ -69,7 +72,7 @@ class ReadTextPage extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          height: 240,
+          height: 220,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF0D47A1), Color(0xFF1976D2), Color(0xFF42A5F5)],
@@ -84,24 +87,24 @@ class ReadTextPage extends StatelessWidget {
         ),
         Positioned(
           top: 30,
-          left: 30,
+          left: 20,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Read Text',
                 style: TextStyle(
-                  fontSize: 35,
+                  fontSize: 30,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 15),
               Text(
                 'Assists you in all reading challenges, \n'
                     'providing easy access to processed\n'
                     'text for better understanding.',
-                style: TextStyle(fontSize: 18, color: Colors.white70),
+                style: TextStyle(fontSize: 16, color: Colors.white70),
               ),
             ],
           ),
@@ -110,14 +113,14 @@ class ReadTextPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCustomIconOption(BuildContext context, String imagePath, String title,VoidCallback onTap,) {
+  Widget _buildCustomIconOption(BuildContext context, String imagePath, String title, VoidCallback onTap,) {
     return GestureDetector(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 5),
         child: Container(
           width: double.infinity,
-          padding: EdgeInsets.all(30),
+          padding: EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
@@ -132,25 +135,22 @@ class ReadTextPage extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(20),
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Color(0xFF1D9AC6),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Image.asset(imagePath, width: 50, height: 50),
+                child: Image.asset(imagePath, width: 40, height: 40),
               ),
               SizedBox(width: 20),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -160,9 +160,6 @@ class ReadTextPage extends StatelessWidget {
   }
 }
 
-
-
-// Replace NextPage with actual pages
 class NextPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

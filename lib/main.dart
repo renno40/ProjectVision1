@@ -1,10 +1,12 @@
 import 'package:camera/camera.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:testnow/screens/10_setting.dart';
+import 'package:testnow/screens/8th_help.dart';
 import 'package:testnow/screens/profilescreen.dart';
-import 'package:testnow/wedgets/themProvider.dart';
+import 'imagetext.dart';
 import 'logic/profile_cubit.dart';
 import 'screens/7th_detectScreen.dart';
 
@@ -19,29 +21,32 @@ import 'screens/3rd_login.dart';
 import 'screens/4rth_onboard.dart';
 import 'screens/5th_home.dart';
 import 'screens/6th_text.dart';
-import 'screens/8th_glass.dart';
-import 'screens/9th_history.dart';
 
 void main() async {
+  final anonkey =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0cnlqdGdqeW9xdG5qaXZ0bmx0Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODQ0NzM1OCwiZXhwIjoyMDY0MDIzMzU4fQ.IGzL1wj5AlrVNA0mjKN2nfUiX9Ei2g1FMy2_3IgoYx0";
+
   WidgetsFlutterBinding.ensureInitialized();
+
+  await EasyLocalization.ensureInitialized();
   await Supabase.initialize(
-    url: "https://nierhnzvsouakqbvsfhz.supabase.co",
-    anonKey:
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pZXJobnp2c291YWtxYnZzZmh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYyNzAyODksImV4cCI6MjA2MTg0NjI4OX0.846QDHPbxOGiwoc2eArY_s6vXwZA03JhJiOpcc8Ws_U",
-  );
+      url: "https://ktryjtgjyoqtnjivtnlt.supabase.co", anonKey: anonkey);
   final cameras = await availableCameras();
 
-  runApp(
-    MultiProvider(
+  runApp(EasyLocalization(
+    supportedLocales: [Locale('en'), Locale('ar')],
+    path: 'assets/translations', // <-- change the path of the translation files
+    fallbackLocale: Locale('en'),
+    child: MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()), // Theme provider
         BlocProvider(create: (context) => ProfileCubit()), // ProfileCubit
       ],
-      child:  MyApp(cameras: cameras,), // Your app
+      child: MyApp(
+        cameras: cameras,
+      ), // Your app
     ),
-  );
+  ));
 }
-
 
 class MyApp extends StatelessWidget {
   final List<CameraDescription> cameras;
@@ -55,6 +60,9 @@ class MyApp extends StatelessWidget {
         splitScreenMode: true,
         builder: (_, child) {
           return MaterialApp(
+            localizationsDelegates: context.localizationDelegates,
+            supportedLocales: context.supportedLocales,
+            locale: context.locale,
             debugShowCheckedModeBanner: false,
             home: OnboardScreen(),
             routes: {
@@ -62,21 +70,24 @@ class MyApp extends StatelessWidget {
               "/OnboardScreen": (context) => OnboardScreen(),
               "/register": (context) => Register(),
               "/login": (context) => LoginScreen(),
-              "/Home": (context) => Homescreen(cameras: cameras,),
+              "/Home": (context) => Homescreen(
+                    cameras: cameras,
+                  ),
               "/ReadTextScreen": (context) => ReadTextPage(),
-              "/FindGlassesScreen": (context) => GlassesScreen(),
-              "/history": (context) => HistoryScreen(),
-              "/text": (context) => TextRecognitionScreen(),
-              "/detect": (context) => RealTimeObjectDetection(cameras:cameras,),
+              "/TextRecognitionScreen": (context) => TextRecognitionScreen(),
+              "/detect": (context) => RealTimeObjectDetection(
+                    cameras: cameras,
+                  ),
               "/profile": (context) => ProfileScreen(),
-              "/settings":(context) => SettingsScreen(),
+              "/settings": (context) => SettingsScreen(),
+              "/ImportGallery": (context) => ImportGallery(),
+              "/help": (context) => HelpScreen(),
             },
             initialRoute: "/splash",
-
           );
         });
   }
-}// import 'dart:async';
+} // import 'dart:async';
 // import 'dart:io';
 // import 'package:flutter/material.dart';
 // import 'package:camera/camera.dart';

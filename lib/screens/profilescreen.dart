@@ -1,7 +1,10 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../logic/profile_cubit.dart';
+import '2nd_register.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -33,16 +36,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () {
               // Navigate to edit profile page
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Edit profile feature coming soon")),
+                const SnackBar(
+                    content: Text("Edit profile feature coming soon")),
               );
             },
           ),
         ],
       ),
-      body:
-
-
-      BlocBuilder<ProfileCubit, ProfileState>(
+      body: BlocBuilder<ProfileCubit, ProfileState>(
         builder: (context, state) {
           if (state is ProfileLoading) {
             return const Center(
@@ -133,24 +134,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _buildActionButton(
-                          icon: Icons.settings,
-                          label: "Settings",
+                          icon: Icons.language,
+                          label: "${context.locale.languageCode}",
                           onPressed: () {
-                            // Navigate to settings
+                            if (context.locale == Locale('en')) {
+                              context.setLocale(Locale('ar'));
+                            } else {
+                              context.setLocale(Locale('en'));
+                            }
                           },
                         ),
                         _buildActionButton(
                           icon: Icons.help_outline,
                           label: "Help",
                           onPressed: () {
-                            // Navigate to help screen
+                            Navigator.pushNamed(context, "/help");
                           },
                         ),
                         _buildActionButton(
                           icon: Icons.logout,
                           label: "Logout",
-                          onPressed: () {
-                            // Logout functionality
+                          onPressed: () async {
+                            // 1. Sign out from Supabase
+                            await Supabase.instance.client.auth.signOut();
+
+                            // 2. Move the user to the login screen (replace with your route/widget)
+                            if (!context.mounted) return; // safety check
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (_) => Register()),
+                              (route) => false, // remove all previous routes
+                            );
                           },
                         ),
                       ],

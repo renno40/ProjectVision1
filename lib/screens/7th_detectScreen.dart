@@ -36,8 +36,8 @@ class RealTimeObjectDetectionState extends State<RealTimeObjectDetection> {
   // if you want to use assets/ssd_mobilenet.tflite  set name Model "SSDMobileNet" in Function "detectObjectOnFrame"
   Future<void> loadModel() async {
     String? res = await Tflite.loadModel(
-      model: 'assets/ssd_mobilenet.tflite',
-      labels: 'assets/ssd_mobilenet.txt',
+      model: 'assets/yolov8n_float32 (1).tflite',
+      labels: 'assets/metadata.yaml',
     );
     setState(() {
       isModelLoaded = res != null;

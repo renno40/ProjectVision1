@@ -18,26 +18,54 @@ class _TextRecognitionScreenState extends State<TextRecognitionScreen> {
   final FlutterTts _flutterTts = FlutterTts();
 
   String _recognizedText = "";
-  String _currentLanguage = "English-US";
+  String _currentLanguage = "en-US";
+  double _speechRate = 0.5;
+  double _pitch = 1.0;
+  double _volume = 1.0;
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
     _textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
-    _setTtsLanguage();
+    _initTts();
   }
 
-  Future<void> _setTtsLanguage() async {
+  Future<void> _initTts() async {
     await _flutterTts.setLanguage(_currentLanguage);
-    await _flutterTts.setSpeechRate(0.5);
+    await _flutterTts.setSpeechRate(_speechRate);
+    await _flutterTts.setPitch(_pitch);
+    await _flutterTts.setVolume(_volume);
+
+    try {
+      final voices = await _flutterTts.getVoices;
+      if (voices != null) {
+        final naturalVoices = voices.where((voice) {
+          final voiceMap = voice as Map<String, dynamic>;
+          final voiceName = voiceMap['name'] as String? ?? '';
+          return voiceName.toLowerCase().contains('natural') ||
+              voiceName.toLowerCase().contains('enhanced') ||
+              voiceName.toLowerCase().contains('premium');
+        }).toList();
+
+        if (naturalVoices.isNotEmpty) {
+          final selectedVoice = naturalVoices.first as Map<String, dynamic>;
+          await _flutterTts.setVoice({
+            "name": selectedVoice["name"],
+            "locale": selectedVoice["locale"]
+          });
+        }
+      }
+    } catch (e) {
+      print("Error setting voice: $e");
+    }
   }
 
   void _toggleLanguage() async {
     setState(() {
-      _currentLanguage = _currentLanguage == "English-US" ? "ar-SA" : "English-US";
+      _currentLanguage = (_currentLanguage == "en-US") ? "ar-SA" : "en-US";
     });
-    await _setTtsLanguage();
+    await _flutterTts.setLanguage(_currentLanguage);
   }
 
   Future<void> _initializeCamera() async {
@@ -56,25 +84,44 @@ class _TextRecognitionScreenState extends State<TextRecognitionScreen> {
     setState(() {});
   }
 
-  Future<void> _captureAndRecognizeImage() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) return;
+  Future<void> _captureAndRecognizeText() async {
+    if (!_cameraController!.value.isInitialized) return;
 
     try {
-      final image = await _cameraController!.takePicture();
-      final inputImage = InputImage.fromFilePath(image.path);
-      final recognizedText = await _textRecognizer.processImage(inputImage);
-      final newText = recognizedText.text.trim();
+      final imageFile = await _cameraController!.takePicture();
+      final inputImage = InputImage.fromFilePath(imageFile.path);
+      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
+      final text = recognizedText.text.trim();
 
-      if (newText.isNotEmpty && newText != _recognizedText) {
+      if (text.isNotEmpty) {
         setState(() {
-          _recognizedText = newText;
+          _recognizedText = text;
         });
-        await _flutterTts.setLanguage(_currentLanguage);
-        await _flutterTts.speak(newText);
+        await _speakText(text);
       }
     } catch (e) {
-      print("Capture error: $e");
+      print("Error taking picture: $e");
     }
+  }
+
+  Future<void> _speakText(String text) async {
+    final processedText = _processTextForNaturalSpeech(text);
+    await _flutterTts.stop();
+    await Future.delayed(const Duration(milliseconds: 200));
+    await _flutterTts.speak(processedText);
+  }
+
+  String _processTextForNaturalSpeech(String text) {
+    var processed = text;
+    processed = processed.replaceAll(' and ', ', and ');
+    processed = processed.replaceAll(' but ', ', but ');
+    processed = processed.replaceAll(' or ', ', or ');
+    processed = processed.replaceAll('%', ' percent ');
+    processed = processed.replaceAll('&', ' and ');
+    processed = processed.replaceAll('+', ' plus ');
+    processed = processed.replaceAll('=', ' equals ');
+    processed = processed.replaceAll('/', ' divided by ');
+    return processed;
   }
 
   @override
@@ -93,35 +140,109 @@ class _TextRecognitionScreenState extends State<TextRecognitionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("📸 Text Detection"),
+        title: const Text("📸 Text Recognition"),
         actions: [
           IconButton(
             icon: const Icon(Icons.language),
             onPressed: _toggleLanguage,
-            tooltip: "Language",
+            tooltip: "Language: $_currentLanguage",
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_voice),
+            onPressed: _showVoiceSettings,
+            tooltip: "Voice Settings",
           ),
         ],
       ),
       body: Stack(
         children: [
           CameraPreview(_cameraController!),
-          Container(
+          Align(
             alignment: Alignment.bottomCenter,
-            padding: const EdgeInsets.all(16),
-            color: Colors.black54,
-            child: Text(
-              _recognizedText,
-              style: const TextStyle(color: Colors.white, fontSize: 20),
-              textAlign: TextAlign.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: Colors.black54,
+                  child: Text(
+                    _recognizedText,
+                    style: const TextStyle(color: Colors.white, fontSize: 20),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: _captureAndRecognizeText,
+                  icon: const Icon(Icons.camera),
+                  label: const Text("Take Picture"),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _captureAndRecognizeImage,
-        child: const Icon(Icons.camera_alt),
-        tooltip: 'Capture and Read Text',
-      ),
+    );
+  }
+
+  void _showVoiceSettings() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("Voice Settings", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Text("Speech Rate: ${_speechRate.toStringAsFixed(1)}"),
+                  Slider(
+                    value: _speechRate,
+                    min: 0.1,
+                    max: 1.0,
+                    divisions: 9,
+                    onChanged: (value) {
+                      setModalState(() => _speechRate = value);
+                      _flutterTts.setSpeechRate(value);
+                    },
+                  ),
+                  Text("Pitch: ${_pitch.toStringAsFixed(1)}"),
+                  Slider(
+                    value: _pitch,
+                    min: 0.5,
+                    max: 2.0,
+                    divisions: 15,
+                    onChanged: (value) {
+                      setModalState(() => _pitch = value);
+                      _flutterTts.setPitch(value);
+                    },
+                  ),
+                  Text("Volume: ${_volume.toStringAsFixed(1)}"),
+                  Slider(
+                    value: _volume,
+                    min: 0.1,
+                    max: 1.0,
+                    divisions: 9,
+                    onChanged: (value) {
+                      setModalState(() => _volume = value);
+                      _flutterTts.setVolume(value);
+                    },
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      _speakText("This is a test of the voice settings.");
+                    },
+                    child: const Text("Test Voice"),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

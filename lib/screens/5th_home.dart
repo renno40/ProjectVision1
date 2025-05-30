@@ -1,4 +1,5 @@
 import 'package:camera/camera.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:testnow/screens/10_setting.dart';
@@ -17,6 +18,7 @@ class Homescreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFD7ECFB), // Light blue background
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
         elevation: 0.0,
         centerTitle: true,
@@ -25,7 +27,7 @@ class Homescreen extends StatelessWidget {
           children: [
             SizedBox(width: 100.w),
             Text(
-              "HOME",
+              "hello".tr(),
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 20.sp,
@@ -49,12 +51,13 @@ class Homescreen extends StatelessWidget {
             children: [
               // Welcome Text
               Text(
-                "HELLO!!",
+              "hello".tr(),
                 style: TextStyle(fontSize: 40.sp, fontWeight: FontWeight.w500),
               ),
               Text(
                 "Welcome to VisionMate",
-                style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.normal),
+                style:
+                    TextStyle(fontSize: 17.sp, fontWeight: FontWeight.normal),
               ),
 
               SizedBox(height: 40.h),
@@ -70,7 +73,9 @@ class Homescreen extends StatelessWidget {
                 context,
                 "Walk Assist",
                 "assets/walk.png",
-                RealTimeObjectDetection(cameras: cameras,),
+                RealTimeObjectDetection(
+                  cameras: cameras,
+                ),
               ),
               buildFeatureTile(
                 context,
@@ -90,23 +95,25 @@ class Homescreen extends StatelessWidget {
         unselectedItemColor: Colors.grey,
         currentIndex: 0, // Default to home selected
         onTap: (index) {
-          if (index == 1) { // Settings button
+          if (index == 1) {
+            // Settings button
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => SettingsScreen()),
+              MaterialPageRoute(builder: (context) => ProfileScreen()),
             );
           }
         },
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
   }
 
   // Function to build feature buttons
-  Widget buildFeatureTile(BuildContext context, String title, String imagePath, Widget destination) {
+  Widget buildFeatureTile(BuildContext context, String title, String imagePath,
+      Widget destination) {
     return GestureDetector(
       onTap: () {
         Navigator.push(

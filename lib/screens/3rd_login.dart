@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:testnow/screens/2nd_register.dart';
 import 'package:testnow/screens/4rth_onboard.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // Add this package for better icons
@@ -19,6 +20,38 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Password visibility toggle
   bool _obscurePassword = true;
+
+  Future<void> _loginWithSupabase() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    try {
+      final response = await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (response.user != null) {
+        // ✅ Login successful
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => OnboardScreen()),
+        );
+      }
+    } on AuthException catch (error) {
+      _showSnackbar(error.message);
+    } catch (_) {
+      _showSnackbar("Unexpected error. Please try again.");
+    }
+  }
+
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -140,6 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         alignment: Alignment.centerRight,
                         child: TextButton(
                           onPressed: () {
+
                             // TODO: Implement forgot password functionality
                           },
                           child: Text(
@@ -162,6 +196,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: ElevatedButton(
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
+                              _loginWithSupabase();
+                               // ADD FUN DATA BASE
                               // If form is valid, navigate to the next screen
                               Navigator.push(
                                 context,

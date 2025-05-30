@@ -4,7 +4,6 @@ import 'package:testnow/screens/5th_home.dart';
 import 'package:testnow/wedgets/feature1.dart';
 import 'package:testnow/wedgets/feature2.dart';
 import 'package:testnow/wedgets/feature3.dart';
-import 'package:testnow/wedgets/feature4.dart';
 import 'package:testnow/wedgets/feature5.dart';
 class OnboardScreen extends StatefulWidget {
   const OnboardScreen({super.key});
@@ -36,7 +35,6 @@ class _OnboardScreenState extends State<OnboardScreen> {
                   featureOne(),
                   featuretwo(),
                   featurethree(),
-                  featurefour(),
                   featurefive(),
                 ],
               ),
