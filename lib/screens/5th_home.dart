@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:testnow/object_detection/presentation/screens/camera_inference_screen.dart';
 import 'package:testnow/screens/10_setting.dart';
 import 'package:testnow/screens/6th_text.dart';
 import 'package:testnow/screens/profilescreen.dart';
@@ -64,19 +65,20 @@ class Homescreen extends StatelessWidget {
                 context,
                 "Read Text",
                 "assets/text.png",
-                ReadTextPage(),
+                (_) => ReadTextPage(),
               ),
               buildFeatureTile(
                 context,
                 "Walk Assist",
                 "assets/walk.png",
-                RealTimeObjectDetection(cameras: cameras,),
+                (_) => CameraInferenceScreen(),
+                // RealTimeObjectDetection(cameras: cameras,),
               ),
               buildFeatureTile(
                 context,
                 "My Profile",
                 "assets/man-avatar-icon-free-vector.jpg", // You'll need to add this image to your assets
-                ProfileScreen(), // New profile screen instead of GlassesScreen
+                (_)=> ProfileScreen(), // New profile screen instead of GlassesScreen
               ),
             ],
           ),
@@ -106,12 +108,12 @@ class Homescreen extends StatelessWidget {
   }
 
   // Function to build feature buttons
-  Widget buildFeatureTile(BuildContext context, String title, String imagePath, Widget destination) {
+  Widget buildFeatureTile(BuildContext context, String title, String imagePath, Widget Function(BuildContext) destination) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => destination),
+          MaterialPageRoute(builder: destination),
         );
       },
       child: Container(

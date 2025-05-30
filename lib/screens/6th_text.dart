@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class ReadTextPage extends StatelessWidget {
+class  ReadTextPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,31 +25,32 @@ class ReadTextPage extends StatelessWidget {
           },
         ),
       ),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: Padding(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildCustomIconOption(context, 'assets/cam-image.png', 'Open Camera',   () {
-    Navigator.pushNamed(context, "/text");
-  }),
+                        Navigator.pushNamed(context, "/text");
+                      }),
                   SizedBox(height: 10),
                   _buildCustomIconOption(context, 'assets/gallery-image.png', 'Import from Gallery',   () {
-    Navigator.pushNamed(context, "/text");
+                        Navigator.pushNamed(context, "/text");
                   }),
                   SizedBox(height: 10),
                   _buildCustomIconOption(context, 'assets/history-image.png', 'History',   () {
-    Navigator.pushNamed(context, "/history");
-  }),
+                        Navigator.pushNamed(context, "/history");
+                      }),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
@@ -140,18 +141,17 @@ class ReadTextPage extends StatelessWidget {
                 child: Image.asset(imagePath, width: 50, height: 50),
               ),
               SizedBox(width: 20),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 24.sp,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              )
             ],
           ),
         ),
