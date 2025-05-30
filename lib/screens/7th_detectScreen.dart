@@ -31,7 +31,7 @@ class RealTimeObjectDetectionState extends State<RealTimeObjectDetection> {
     super.dispose();
   }
 
-  // i add two models to test it instead of your model ,
+  // i add two models to object_detection it instead of your model ,
   // if you user assets/yolov2_tiny.tflite , set name Model "YOLO" in Function "detectObjectOnFrame"
   // if you want to use assets/ssd_mobilenet.tflite  set name Model "SSDMobileNet" in Function "detectObjectOnFrame"
   Future<void> loadModel() async {
