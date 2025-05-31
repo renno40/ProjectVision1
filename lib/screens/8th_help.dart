@@ -45,10 +45,6 @@ class HelpScreen extends StatelessWidget {
                 'Find My Glasses',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              Text(
-                'Tap this to search for your glasses. Vision Mate uses AI to help you find them.',
-                style: TextStyle(fontSize: 16),
-              ),
               SizedBox(height: 16),
               Text(
                 'Voice Feedback',

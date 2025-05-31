@@ -3,7 +3,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
-import 'package:testnow/screens/10_setting.dart';
 import 'package:testnow/screens/8th_help.dart';
 import 'package:testnow/screens/profilescreen.dart';
 import 'imagetext.dart';
@@ -79,7 +78,6 @@ class MyApp extends StatelessWidget {
                     cameras: cameras,
                   ),
               "/profile": (context) => ProfileScreen(),
-              "/settings": (context) => SettingsScreen(),
               "/ImportGallery": (context) => ImportGallery(),
               "/help": (context) => HelpScreen(),
             },

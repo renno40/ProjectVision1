@@ -80,7 +80,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
                       }
                     },
                     child: Text(
-                      index == 4 ? "Next" : "Next",
+                      index == 3 ? "Next" : "Next",
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,

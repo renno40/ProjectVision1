@@ -2,7 +2,6 @@ import 'package:camera/camera.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:testnow/screens/10_setting.dart';
 import 'package:testnow/screens/6th_text.dart';
 import 'package:testnow/screens/profilescreen.dart';
 
